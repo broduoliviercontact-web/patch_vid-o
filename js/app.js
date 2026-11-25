@@ -1,5 +1,5 @@
-import { BAV, bav, ZONES, PORTS_IN, PORTS_OUT, U27, SYNCHRO, PTZ, VIDEOHUB, PARC_DEFAUT, PARC_NOMS } from './data.js';
-import { compute, SOURCES, DESTS, src, dst, APP_SRC, APP_DST } from './route.js';
+import { BAV, bav, ZONES, PORTS_IN, PORTS_OUT, U27, SYNCHRO, PTZ, VIDEOHUB, PARC_DEFAUT, PARC_NOMS, SITE_AUDIO } from './data.js';
+import { compute, SOURCES, DESTS, src, dst, APP_SRC, APP_DST, videohubTexte, videohubCommande } from './route.js';
 
 const $ = s => document.querySelector(s);
 const KEY = 'patchvideo-v1';
@@ -58,6 +58,9 @@ function options(list, sel, other) {
 const seg = (name, opts, val, title) => `<span class="seg" data-seg="${name}" title="${title}">${Object.entries(opts).map(([k, v]) =>
   `<button data-v="${k}" class="${k === val ? 'on' : ''}" title="${v}">${k.toUpperCase()}</button>`).join('')}</span>`;
 
+const sonHtml = r => r.son ? `<div class="son">🔊 ${r.son} <a href="${SITE_AUDIO}" target="_blank" rel="noopener">Site audio ↗</a></div>` : '';
+const depHtml = r => r.depannage.length ? `<details class="dep"><summary>Pas d'image ?</summary>
+  <ol>${r.depannage.map(t => `<li>${t}</li>`).join('')}</ol></details>` : '';
 const ouverts = new Set();          // liaisons dont le détail est ouvert (pas enregistré)
 function renderLinks() {
   $('#globalWarn').innerHTML = res.warnings.map(w => `<div class="w err">⚠︎ ${esc(w)}</div>`).join('');
@@ -77,6 +80,8 @@ function renderLinks() {
           <span class="more">détail</span></summary>
         <ol class="steps">${r.steps.map(st => `<li class="${st.fixe ? 'fixe' : ''} ${st.option ? 'option' : ''}"><span class="lieu ${esc(st.lieu)}">${esc(st.lieu)}</span>${st.txt}</li>`).join('')}</ol>
         ${r.infos.map(w => `<div class="info">${esc(w)}</div>`).join('')}
+        ${sonHtml(r)}
+        ${depHtml(r)}
       </details>` : ''}`;
     return `<div class="row ${r && !r.ok ? 'bad' : ''}" data-id="${l.id}">
       <div class="main">
@@ -113,6 +118,53 @@ $('#links').addEventListener('click', e => {
   if (b) { l[b.parentElement.dataset.seg] = b.dataset.v; render(); }
 });
 
+// Configurations : un ensemble de liaisons prêt à charger. Les tiennes restent même après « Nouveau ».
+const CONFIGS = [
+  { nom: 'Conférence', desc: 'Ordi au plateau (BAV-20) → VP, avec contrôle sur le SmartView',
+    links: [{ nom: 'Ordi plateau', src: 'BAV-20:VID-I19', srcApp: 'hdmi', dst: 'BAV-05:VID-01' },
+            { nom: 'Contrôle ordi', src: 'BAV-20:VID-I19', srcApp: 'hdmi', dst: 'sv1' }] },
+  { nom: 'Captation PTZ', desc: 'PTZ sur le SmartView et dans un ordi en USB (Inogeni) en régie',
+    links: [{ nom: 'Caméra PTZ', src: 'ptz', dst: 'sv1' }, { nom: 'PTZ vers ordi', src: 'ptz', dst: 'BAV-03:VID-02', dstApp: 'usb' }] },
+  { nom: 'Projection depuis la régie', desc: 'Ordi en régie (BAV-03) → VP en direct, sans matrice',
+    links: [{ nom: 'Ordi régie', src: 'BAV-03:VID-02', srcApp: 'hdmi', dst: 'BAV-05:VID-01' }] },
+  { nom: 'Conférence filmée', desc: 'Ordi plateau → VP, PTZ → ordi USB, contrôle des deux sur le SmartView. Demande 2 convertisseurs SDI → HDMI si le VP est en HDMI.',
+    links: [{ nom: 'Ordi plateau', src: 'BAV-20:VID-I19', srcApp: 'hdmi', dst: 'BAV-05:VID-01' },
+            { nom: 'Contrôle ordi', src: 'BAV-20:VID-I19', srcApp: 'hdmi', dst: 'sv1' },
+            { nom: 'PTZ vers ordi', src: 'ptz', dst: 'BAV-03:VID-02', dstApp: 'usb' },
+            { nom: 'Contrôle PTZ', src: 'ptz', dst: 'sv2' }] },
+];
+const CKEY = 'patchvideo-configs';
+const mesConfigs = () => { try { return JSON.parse(localStorage.getItem(CKEY)) || []; } catch { return []; } };
+const setMesConfigs = c => { try { localStorage.setItem(CKEY, JSON.stringify(c)); } catch {} };
+function chargeConfig(c) {
+  if (state.links.length && !confirm(`Remplacer les ${state.links.length} liaison(s) actuelles par « ${c.nom} » ?`)) return;
+  state.links = c.links.map(l => ({ id: uid(), ...l })); state.done = {}; ouverts.clear();
+  $('#panel').hidden = true; render(); tab('links'); flash(`« ${c.nom} » chargée`);
+}
+function openConfigs() {
+  const mine = mesConfigs();
+  const item = (c, i, own) => `<div class="cfg"><div><b>${esc(c.nom)}</b><div class="hint">${esc(c.desc || c.links.map(l => l.nom || '?').join(', '))}</div></div>
+    <div class="cfgb"><button class="primary" data-load="${own ? 'm' : 'p'}${i}">Charger</button>${own ? `<button class="icon" data-delc="${i}" title="Supprimer">✕</button>` : ''}</div></div>`;
+  $('#panelBody').innerHTML = `<h2>Configurations</h2><p class="hint">Charger une configuration remplace les liaisons en cours.</p>
+    <h3>Prêtes</h3>${CONFIGS.map((c, i) => item(c, i, false)).join('')}
+    <h3>Les tiennes</h3>${mine.length ? mine.map((c, i) => item(c, i, true)).join('') : '<p class="empty">Aucune pour l\'instant.</p>'}
+    <div class="bar" style="margin-top:12px"><input id="cfgNom" placeholder="Nom (ex. Concert jazz)" value="${esc(state.artist || '')}">
+      <button id="cfgSave" ${state.links.length ? '' : 'disabled'}>Enregistrer les liaisons actuelles</button></div>`;
+  $('#panel').hidden = false;
+}
+$('#bConfigs').onclick = openConfigs;
+$('#panelBody').addEventListener('click', e => {
+  const t = e.target;
+  if (t.dataset.load) { const k = t.dataset.load; chargeConfig(k[0] === 'p' ? CONFIGS[+k.slice(1)] : mesConfigs()[+k.slice(1)]); }
+  if (t.dataset.delc !== undefined) { const m = mesConfigs(); if (confirm(`Supprimer « ${m[+t.dataset.delc].nom} » ?`)) { m.splice(+t.dataset.delc, 1); setMesConfigs(m); openConfigs(); } }
+  if (t.id === 'cfgSave') {
+    const nom = $('#cfgNom').value.trim() || 'Sans nom', m = mesConfigs();
+    const links = state.links.map(({ id, ...l }) => l), i = m.findIndex(c => c.nom === nom);
+    if (i >= 0 && !confirm(`« ${nom} » existe déjà. La remplacer ?`)) return;
+    i >= 0 ? (m[i] = { nom, links }) : m.push({ nom, links }); setMesConfigs(m); openConfigs(); flash('Configuration enregistrée');
+  }
+});
+
 const PRESETS = {
   ordiVP: () => ({ nom: 'Ordi plateau', src: libreSrc(['BAV-20:VID-I19', 'BAV-23:VID-I25', 'BAV-21:VID-I21', 'BAV-22:VID-I23']), srcApp: 'hdmi', dst: libreDst(['BAV-05:VID-01', 'BAV-05:VID-02']) }),
   ptzSV: () => ({ nom: 'Caméra PTZ', src: 'ptz', dst: libreDst(['sv1', 'sv2']) }),
@@ -142,10 +194,38 @@ function renderHub() {
     <h3>Routage à faire</h3>
     <p class="hint">${VIDEOHUB.nom}, ${VIDEOHUB.lieu}. Se pilote depuis l'appli Blackmagic Videohub Control sur le réseau (matrice en Ethernet, câble ${VIDEOHUB.reseau.cable}, sur le ${VIDEOHUB.reseau.vers}).</p>
     ${routes}
+    <h3>Envoyer au Videohub</h3>
+    <div class="vhsend">
+      <p class="hint">Depuis un Mac sur le même réseau que la matrice : le Terminal envoie les noms des 40 ports (ils s'affichent dans Videohub Control et sur l'écran de la matrice) et le routage du jour. <b>À tester une première fois hors spectacle</b> : le routage change tout de suite.</p>
+      <div class="bar">
+        <label>Adresse IP du Videohub <input id="vhIp" value="${esc(state.settings.videohubIp || '')}" placeholder="ex. 192.168.1.50" size="16"></label>
+        <label class="tog"><input type="checkbox" id="vhLab" ${vhOpt.labels ? 'checked' : ''}> Noms des ports</label>
+        <label class="tog"><input type="checkbox" id="vhRout" ${vhOpt.routage ? 'checked' : ''}> Routage du jour (${res.videohub.length})</label>
+      </div>
+      <pre id="vhCmd" class="cmd">${esc(videohubCommande(videohubTexte(res, vhOpt), state.settings.videohubIp))}</pre>
+      <div class="bar"><button id="vhCopy" class="primary">Copier la commande</button>
+        <span class="hint">Ouvre Terminal (Applications → Utilitaires), colle, Entrée. La matrice répond par son état puis « ACK ». Si le Terminal ne rend pas la main, Ctrl+C.</span></div>
+      <p class="hint">L'adresse IP se lit dans Blackmagic Videohub Setup ou sur l'écran de la matrice (menu réseau).</p>
+    </div>
     <h3>Tous les ports</h3>
     <p class="hint">Les plaques des boîtiers portent le numéro de port : <b>VID-I19</b> = entrée 19, <b>VID-O15</b> = sortie 15. Grisé : prévu pour le mélangeur, qui n'est pas installé.</p>
     <div class="cols"><div>${ports('in', usedIn)}</div><div>${ports('out', usedOut)}</div></div>`;
 }
+
+const vhOpt = { labels: true, routage: true };
+$('#tab-hub').addEventListener('input', e => {
+  if (e.target.id === 'vhIp') { state.settings.videohubIp = e.target.value.trim(); save(); }
+  if (e.target.id === 'vhLab') vhOpt.labels = e.target.checked;
+  if (e.target.id === 'vhRout') vhOpt.routage = e.target.checked;
+  $('#vhCmd').textContent = videohubCommande(videohubTexte(res, vhOpt), state.settings.videohubIp);
+});
+$('#tab-hub').addEventListener('click', async e => {
+  if (e.target.id !== 'vhCopy') return;
+  const txt = $('#vhCmd').textContent;
+  try { await navigator.clipboard.writeText(txt); flash('Commande copiée'); }
+  catch { const r = document.createRange(); r.selectNodeContents($('#vhCmd')); getSelection().removeAllRanges(); getSelection().addRange(r); flash('Sélectionnée : fais Cmd+C'); }
+});
+function flash(t) { const d = document.createElement('div'); d.className = 'flash'; d.textContent = t; document.body.append(d); setTimeout(() => d.remove(), 1800); }
 
 // ------------------------------------------------------------------ onglet Patch régie
 function renderRegie() {
@@ -370,12 +450,12 @@ $('#print').onclick = () => window.print();
 
 // ------------------------------------------------------------------ mode terrain
 // Une liaison par écran, gros texte, une case par branchement. Dernière page : récap régie.
-let tIdx = 0;
+let tIdx = 0, tDep = false;
 const fait = (k, txt) => (state.done?.[k] || []).includes(txt);
 function pagesTerrain() {
   const pages = res.links.filter(r => r.ok).map(r => {
     const l = state.links.find(x => x.id === r.id);
-    return { key: l.id, titre: l.nom || 'Liaison', sous: `${src(l.src)?.nom} → ${dst(l.dst)?.nom}`, couleur: couleur(l.id),
+    return { key: l.id, titre: l.nom || 'Liaison', sous: `${src(l.src)?.nom} → ${dst(l.dst)?.nom}`, couleur: couleur(l.id), r,
       items: r.steps.filter(st => !st.option).map(st => ({ lieu: st.lieu, txt: st.txt, fixe: st.fixe })), infos: r.infos };
   });
   if (res.videohub.length || res.cordons.length) pages.push({ key: 'recap', titre: 'Récap régie', sous: 'Tout ce qui se fait depuis la régie, d\'un coup',
@@ -402,6 +482,9 @@ function renderTerrain() {
            <span><span class="lieu ${esc(it.lieu)}">${esc(it.lieu)}</span>${it.txt}</span></label></li>`).join('')}</ol>
       ${(p.infos || []).map(w => `<div class="info">${esc(w)}</div>`).join('')}
       ${done === todo.length && todo.length ? '<div class="tok">✓ Tout est branché</div>' : ''}
+      ${p.r ? sonHtml(p.r) : ''}
+      ${p.r?.depannage.length ? `<button id="tDep" class="tdepb ${tDep ? 'on' : ''}">${tDep ? 'Masquer' : 'Pas d\'image ?'}</button>
+        ${tDep ? `<ol class="tdep">${p.r.depannage.map(t => `<li>${t}</li>`).join('')}</ol>` : ''}` : ''}
     </div>
     <div class="tnav"><button id="tPrev" ${tIdx === 0 ? 'disabled' : ''}>◀ Précédente</button>
       <div class="tdots">${pages.map((q, i) => `<button data-p="${i}" class="${i === tIdx ? 'on' : ''}" style="--c:${q.couleur || 'var(--acc)'}" title="${esc(q.titre)}"></button>`).join('')}</div>
@@ -416,9 +499,10 @@ $('#bTerrain').onclick = () => terrain(true);
 $('#terrain').addEventListener('click', e => {
   const t = e.target;
   if (t.id === 'tQuit') return terrain(false);
-  if (t.id === 'tPrev') { tIdx--; return renderTerrain(); }
-  if (t.id === 'tNext') { tIdx++; return renderTerrain(); }
-  if (t.dataset.p) { tIdx = +t.dataset.p; return renderTerrain(); }
+  if (t.id === 'tDep') { tDep = !tDep; return renderTerrain(); }
+  if (t.id === 'tPrev') { tIdx--; tDep = false; return renderTerrain(); }
+  if (t.id === 'tNext') { tIdx++; tDep = false; return renderTerrain(); }
+  if (t.dataset.p) { tIdx = +t.dataset.p; tDep = false; return renderTerrain(); }
   if (t.id === 'tReset' && confirm('Décocher toutes les cases ?')) { state.done = {}; save(); return renderTerrain(); }
 });
 $('#terrain').addEventListener('change', e => {
@@ -434,7 +518,7 @@ $('#terrain').addEventListener('touchstart', e => x0 = e.touches[0].clientX, { p
 $('#terrain').addEventListener('touchend', e => {
   if (x0 === null) return; const dx = e.changedTouches[0].clientX - x0; x0 = null;
   const n = pagesTerrain().length;
-  if (Math.abs(dx) > 70) { tIdx = Math.max(0, Math.min(n - 1, tIdx + (dx < 0 ? 1 : -1))); renderTerrain(); }
+  if (Math.abs(dx) > 70) { tDep = false; tIdx = Math.max(0, Math.min(n - 1, tIdx + (dx < 0 ? 1 : -1))); renderTerrain(); }
 });
 
 // ------------------------------------------------------------------ onglet Comprendre

@@ -27,6 +27,13 @@ Source : synoptique LGS2-INE-EXE-22-SCH-AUD-TN-8002, indice 0 (02/10/2025).
 
 Vérifié : le pupitre AW-RP60GJ pilote bien la caméra PTZ.
 
+## Envoyer au Videohub
+
+Onglet Videohub → « Envoyer au Videohub » : une commande à coller dans le Terminal d'un Mac sur le
+même réseau que la matrice. Elle envoie, par le protocole Ethernet Blackmagic (TCP 9990, ports
+numérotés depuis 0), les noms des ports et le routage du jour. À essayer une première fois hors
+spectacle.
+
 ## Déployer
 
 1. Vercel : Add New → Project → importer `patch_vid-o`, Framework « Other ».

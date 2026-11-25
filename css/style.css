@@ -185,3 +185,20 @@ body.terrain .top, body.terrain .tabs, body.terrain main, body.terrain .panel { 
 .show #date { width:auto; }
 @media (max-width:1400px) { .brand span { display:none; } .show #artist { width:160px; } }
 @media (max-width:600px) { .show { flex-wrap:nowrap; } .show #date { flex:0 0 150px; min-width:0; } body { overflow-x:hidden; } }
+
+/* ---- son, dépannage, Videohub, configurations ---- */
+.son { margin-top:8px; font-size:13px; color:#cfd4dc; } .son a { color:var(--acc); margin-left:6px; white-space:nowrap; }
+.dep { margin-top:8px; border:1px solid #5a4520; background:#2a2217; border-radius:8px; padding:6px 10px; }
+.dep summary { cursor:pointer; color:var(--warn); font-weight:600; font-size:13px; }
+.dep ol, .tdep { margin:8px 0 2px; padding-left:22px; font-size:13.5px; } .dep li, .tdep li { margin:4px 0; }
+.tdepb { margin-top:14px; width:100%; padding:12px; font-size:16px; border-color:var(--warn); color:var(--warn); background:#2a2217; }
+.tdepb.on { background:none; }
+.tdep { font-size:16px; background:#2a2217; border-radius:8px; padding:10px 10px 10px 34px; }
+.tdep li { margin:8px 0; }
+#terrain .son { font-size:15px; margin-top:14px; }
+.vhsend { background:var(--bg2); border:1px solid var(--line); border-radius:8px; padding:12px; margin-bottom:18px; max-width:900px; }
+.vhsend label { font-size:13px; color:var(--mut); display:flex; gap:6px; align-items:center; }
+.cmd { background:#0b0c0e; border:1px solid var(--line); border-radius:6px; padding:10px; max-height:180px; overflow:auto; font-size:12px; white-space:pre; margin:8px 0; }
+.cfg { display:flex; justify-content:space-between; gap:10px; align-items:center; padding:10px 0; border-bottom:1px solid var(--line); }
+.cfgb { display:flex; gap:6px; } .panel h3 { margin:18px 0 4px; font-size:14px; color:var(--mut); }
+#cfgNom { flex:1; }

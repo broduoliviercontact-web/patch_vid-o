@@ -22,22 +22,22 @@ export const ZONES = {
 // ---------------------------------------------------------------------------------------------
 export const BAV = [
   // Plateau
-  { id: 'BAV-20', zone: 'plateau', lieu: 'Plateau face jardin', modele: 'ASG BM3-6M', img: 'BAV-20',
+  { id: 'BAV-20', audio: true, zone: 'plateau', lieu: 'Plateau face jardin', modele: 'ASG BM3-6M', img: 'BAV-20',
     ins:  [{ plaque: 'VID-I19', port: 19, cable: 2019 }, { plaque: 'VID-I20', port: 20, cable: 2020 }],
     outs: [{ plaque: 'VID-O15', port: 15, cable: 2055 }, { plaque: 'VID-O16', port: 16, cable: 2056 }] },
-  { id: 'BAV-21', zone: 'plateau', lieu: 'Plateau face jardin', modele: 'ASG BM3-4M', img: 'BAV-21',
+  { id: 'BAV-21', audio: true, zone: 'plateau', lieu: 'Plateau face jardin', modele: 'ASG BM3-4M', img: 'BAV-21',
     ins:  [{ plaque: 'VID-I21', port: 21, cable: 2021 }, { plaque: 'VID-I22', port: 22, cable: 2022 }],
     outs: [{ plaque: 'VID-O17', port: 17, cable: 2057 }], synchro: { plaque: 'SYNCH', cable: 9508, patch: 'A8' } },
-  { id: 'BAV-22', zone: 'plateau', lieu: 'Plateau face cour', modele: 'ASG BM3-4M', img: 'BAV-22',
+  { id: 'BAV-22', audio: true, zone: 'plateau', lieu: 'Plateau face cour', modele: 'ASG BM3-4M', img: 'BAV-22',
     ins:  [{ plaque: 'VID-I23', port: 23, cable: 2023 }, { plaque: 'VID-I24', port: 24, cable: 2024 }],
     outs: [{ plaque: 'VID-O18', port: 18, cable: 2058 }], synchro: { plaque: 'SYNCH', cable: 9509, patch: 'A9' } },
-  { id: 'BAV-23', zone: 'plateau', lieu: 'Plateau face cour', modele: 'ASG BM3-6M', img: 'BAV-23',
+  { id: 'BAV-23', audio: true, zone: 'plateau', lieu: 'Plateau face cour', modele: 'ASG BM3-6M', img: 'BAV-23',
     ins:  [{ plaque: 'VID-I25', port: 25, cable: 2025 }, { plaque: 'VID-I26', port: 26, cable: 2026 }],
     outs: [{ plaque: 'VID-O19', port: 19, cable: 2059 }, { plaque: 'VID-O20', port: 20, cable: 2060 }] },
-  { id: 'BAV-26', zone: 'plateau', lieu: 'Plateau lointain jardin', modele: 'ASG BM3-4M', img: 'BAV-26',
+  { id: 'BAV-26', audio: true, zone: 'plateau', lieu: 'Plateau lointain jardin', modele: 'ASG BM3-4M', img: 'BAV-26',
     ins:  [{ plaque: 'VID-I27', port: 27, cable: 2027 }],
     outs: [{ plaque: 'VID-O21', port: 21, cable: 2061 }] },
-  { id: 'BAV-28', zone: 'plateau', lieu: 'Plateau lointain cour', modele: 'ASG BM3-4M', img: 'BAV-28',
+  { id: 'BAV-28', audio: true, zone: 'plateau', lieu: 'Plateau lointain cour', modele: 'ASG BM3-4M', img: 'BAV-28',
     ins:  [{ plaque: 'VID-I28', port: 28, cable: 2028 }],
     outs: [{ plaque: 'VID-O22', port: 22, cable: 2062 }] },
   // Gradins
@@ -48,7 +48,7 @@ export const BAV = [
   { id: 'BAV-17', zone: 'gradins', lieu: 'Gradins rang 2', modele: 'ASG BM2-3M',
     ins:  [{ plaque: 'SDI IN', port: 17, cable: 2017 }], outs: [], synchro: { plaque: 'SYNCHRO', cable: 9506, patch: 'A6' } },
   // RDC
-  { id: 'BAV-15', zone: 'rdc', lieu: 'Mur RDC', note: 'Repéré « salle de musique - mur » sur le synoptique', modele: 'ASG BM3-4M', img: 'BAV-15',
+  { id: 'BAV-15', audio: true, zone: 'rdc', lieu: 'Mur RDC', note: 'Repéré « salle de musique - mur » sur le synoptique', modele: 'ASG BM3-4M', img: 'BAV-15',
     ins:  [{ plaque: 'VID-I14', port: 14, cable: 2014 }, { plaque: 'VID-I15', port: 15, cable: 2015 }],
     outs: [{ plaque: 'VID-O13', port: 13, cable: 2053 }, { plaque: 'VID-O14', port: 14, cable: 2054 }] },
   { id: 'BAV-16', zone: 'rdc', lieu: 'R0 jardin', modele: 'ASG BM2-3M',
@@ -61,15 +61,15 @@ export const BAV = [
   { id: 'BAV-09', zone: 'balcons', lieu: 'Balcon cour', modele: 'ASG BM2-3M',
     ins:  [{ plaque: 'SDI IN', port: 10, cable: 2010 }], outs: [], synchro: { plaque: 'SYNCHRO', cable: 9504, patch: 'A4' } },
   // Lignes directes vers la régie (patch U27), sans matrice
-  { id: 'BAV-01', zone: 'salle', lieu: 'Fond de salle jardin', modele: 'ASG BM3-4M', img: 'BAV-01',
+  { id: 'BAV-01', audio: true, zone: 'salle', lieu: 'Fond de salle jardin', modele: 'ASG BM3-4M', img: 'BAV-01',
     vid: [{ plaque: 'VID-01', cable: 2081, u27: 'B1' }, { plaque: 'VID-02', cable: 2082, u27: 'B2' }, { plaque: 'VID-03', cable: 2083, u27: 'B3' }] },
-  { id: 'BAV-04', zone: 'salle', lieu: 'Fond de salle cour', modele: 'ASG BM3-4M', img: 'BAV-04',
+  { id: 'BAV-04', audio: true, zone: 'salle', lieu: 'Fond de salle cour', modele: 'ASG BM3-4M', img: 'BAV-04',
     vid: [{ plaque: 'VID-01', cable: 2092, u27: 'B12' }, { plaque: 'VID-02', cable: 2093, u27: 'B13' }, { plaque: 'VID-03', cable: 2094, u27: 'B14' }] },
   { id: 'BAV-05', zone: 'salle', lieu: 'Vidéoprojecteur', modele: 'ASG BM3-4M',
     vid: [{ plaque: 'VID-01', cable: 2095, u27: 'B15' }, { plaque: 'VID-02', cable: 2096, u27: 'B16' }] },
-  { id: 'BAV-02', zone: 'regie', lieu: 'Régie · mur son', modele: 'ASG BM3-5M', img: 'BAV-02',
+  { id: 'BAV-02', audio: true, zone: 'regie', lieu: 'Régie · mur son', modele: 'ASG BM3-5M', img: 'BAV-02',
     vid: [{ plaque: 'VID-01', cable: 2084, u27: 'B4' }, { plaque: 'VID-02', cable: 2085, u27: 'B5' }] },
-  { id: 'BAV-03', zone: 'regie', lieu: 'Régie · mur vidéo', modele: 'ASG BM3-6M', img: 'BAV-03',
+  { id: 'BAV-03', audio: true, zone: 'regie', lieu: 'Régie · mur vidéo', modele: 'ASG BM3-6M', img: 'BAV-03',
     vid: [{ plaque: 'VID-01', cable: 2086, u27: 'B6', occupe: 'Convertisseur SDI→HDMI fixe de l\'écran 24" (table régie)' },
           { plaque: 'VID-02', cable: 2087, u27: 'B7' }, { plaque: 'VID-03', cable: 2088, u27: 'B8' },
           { plaque: 'VID-04', cable: 2089, u27: 'B9' }, { plaque: 'VID-05', cable: 2090, u27: 'B10' },
@@ -133,6 +133,9 @@ export const PTZ = {
 // ---------------------------------------------------------------------------------------------
 // Destinations « appareil » et parc
 // ---------------------------------------------------------------------------------------------
+// Site audio (patch des prises AUD des boîtiers)
+export const SITE_AUDIO = 'https://patch-auditorium.vercel.app';
+
 export const PARC_DEFAUT = { hdmi2sdi: 1, sdi2hdmi: 1, inogeni: 1, sparkHdmi: 4, sparkSdi: 4 };
 export const PARC_NOMS = {
   hdmi2sdi: 'Convertisseur HDMI → SDI Blackmagic', sdi2hdmi: 'Convertisseur SDI → HDMI Blackmagic',

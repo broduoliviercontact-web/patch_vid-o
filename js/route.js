@@ -1,5 +1,5 @@
 // Calcul des chemins vidéo. Fonctions pures (pas de DOM) : testées par npm test.
-import { BAV, PORTS_IN, PORTS_OUT, PTZ, PARC_DEFAUT, PARC_NOMS, ZONES } from './data.js';
+import { BAV, PORTS_IN, PORTS_OUT, PTZ, PARC_DEFAUT, PARC_NOMS, ZONES, VIDEOHUB } from './data.js';
 
 // ---------------------------------------------------------------------------------------------
 // Points de départ et d'arrivée
@@ -59,10 +59,11 @@ export function compute(state) {
   };
   const routes = {};                        // sortie matrice → entrée matrice
   const destUsed = {};
+  const convSrc = new Set();                // un convertisseur HDMI → SDI par source, même si elle part vers plusieurs arrivées
 
   for (const l of links) {
     const s = src(l.src), d = dst(l.dst);
-    const out = { id: l.id, nom: l.nom || '', ok: true, steps: [], chips: [], warnings: [], infos: [] };
+    const out = { id: l.id, nom: l.nom || '', ok: true, steps: [], chips: [], warnings: [], infos: [], depannage: [], son: null };
     res.links.push(out);
     if (!s || !d) { out.ok = false; out.warnings.push('Point inconnu.'); continue; }
     if (s.type === 'tie' && d.type === 'tie' && s.id === d.id) { out.ok = false; out.warnings.push('Départ et arrivée identiques.'); continue; }
@@ -78,7 +79,7 @@ export function compute(state) {
     if (srcApp === 'ptz') {
       step('Salle', `La caméra PTZ sort en 3G-SDI (câble ${PTZ.sdi.cable}) directement sur l'entrée 29 de la matrice. Rien à brancher.`, { fixe: true });
     } else if (srcApp === 'hdmi') {
-      count(res.materiel, 'hdmi2sdi');
+      if (!convSrc.has(s.id)) { convSrc.add(s.id); count(res.materiel, 'hdmi2sdi'); }
       step(lieuDe(s), `Ordi → câble HDMI → <b>convertisseur HDMI → SDI</b> (alimenté) → câble BNC → prise <b>${s.bav} ${s.plaque}</b>.`);
     } else {
       step(lieuDe(s), `Source SDI → câble BNC → prise <b>${s.bav} ${s.plaque}</b>.`);
@@ -137,6 +138,32 @@ export function compute(state) {
 
     if (srcApp === 'hdmi') out.infos.push('Ordi : règle la sortie en 1920×1080 (50 ou 60 Hz). Les vidéos protégées (HDCP) donnent un écran noir à travers un convertisseur.');
     if (d.vp && !settings.vpEntreeVerifiee) out.infos.push(`Entrée du VP réglée sur ${settings.vpEntree.toUpperCase()} : à vérifier sur place (Réglages).`);
+
+    // --- son de l'ordi : renvoi vers le site audio ---
+    if (srcApp === 'hdmi') {
+      const b = s.bav && BAV.find(x => x.id === s.bav);
+      out.son = b?.audio
+        ? `Son de l'ordi : mini-jack → DI stéréo → prises audio <b>${b.id} AUD</b> (sur le même boîtier), puis patch dans le site audio.`
+        : `Son de l'ordi : mini-jack → DI stéréo au plus près, puis patch dans le site audio.`;
+    }
+
+    // --- pas d'image ? Vérifications dans l'ordre du chemin ---
+    const dep = out.depannage, hub = res.videohub.find(v => v.link === l.id);
+    if (srcApp === 'ptz') dep.push('La caméra est allumée (le pupitre la pilote) ?');
+    if (srcApp === 'hdmi') dep.push('L\'ordi envoie bien une image (écran recopié ou étendu, 1920×1080) ?',
+      'Le convertisseur HDMI → SDI est alimenté, avec son voyant d\'entrée allumé ?');
+    if (srcApp === 'sdi') dep.push('La source sort bien en SDI (1080 de préférence) ?');
+    if (s.bav) dep.push(`Le BNC est bien dans <b>${s.bav} ${s.plaque}</b>${s.type === 'matIn' ? ' (une prise d\'entrée VID-I, pas une sortie VID-O)' : ''} ?`);
+    if (hub) {
+      dep.push(`Dans Videohub Control, la sortie <b>${hub.out}</b> affiche bien l'entrée <b>${hub.in}</b> ?`);
+      if (hub.out !== 9 && hub.out !== 10) dep.push(`Test rapide : route aussi l'entrée <b>${hub.in}</b> vers la sortie <b>9</b> (SmartView gauche). Image sur le SmartView : le problème est après la matrice. Pas d'image : il est avant (source, convertisseur, prise).`);
+    }
+    for (const c of res.cordons.filter(c => c.link === l.id))
+      dep.push(`Le cordon va bien de <b>${c.de.startsWith('A') ? 'U28' : 'U27'} ${c.de}</b> à <b>${c.vers.startsWith('A') ? 'U28' : 'U27'} ${c.vers}</b> (bien enfoncé et verrouillé) ?`);
+    if (dstApp === 'hdmi' || dstApp === 'usb') dep.push('Le convertisseur SDI → HDMI est alimenté, avec son voyant SDI allumé ?');
+    if (d.vp) dep.push(`Le vidéoprojecteur est sur son entrée <b>${settings.vpEntree === 'sdi' ? 'SDI' : 'HDMI'}</b>, obturateur ouvert ?`);
+    if (dstApp === 'usb') dep.push('Dans le logiciel (visio, OBS…), la caméra choisie est bien l\'Inogeni ?');
+    if (srcApp === 'hdmi') dep.push('Écran noir seulement sur une vidéo (Netflix, DVD…) ? C\'est la protection HDCP : teste avec une image fixe.');
   }
 
   // 2. Parc
@@ -149,3 +176,20 @@ export function compute(state) {
 
 function count(m, k) { m[k] = (m[k] || 0) + 1; }
 
+
+// ---------------------------------------------------------------------------------------------
+// Texte à envoyer au Videohub (protocole Ethernet Blackmagic, port TCP 9990).
+// Blocs « EN-TÊTE: », une ligne « port texte » par entrée, ligne vide pour finir. Ports numérotés depuis 0.
+// ---------------------------------------------------------------------------------------------
+const sansAccents = t => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\x20-\x7e]/g, '');
+export function videohubTexte(res, { labels = true, routage = true } = {}) {
+  const blocs = [];
+  const noms = P => Object.entries(P).filter(([, x]) => x?.label).map(([p, x]) => `${p - 1} ${sansAccents(x.label.replace(' (non installé)', ' (absent)'))}`);
+  if (labels) blocs.push(['INPUT LABELS:', ...noms(PORTS_IN)], ['OUTPUT LABELS:', ...noms(PORTS_OUT)]);
+  if (routage && res.videohub.length) blocs.push(['VIDEO OUTPUT ROUTING:', ...res.videohub.map(v => `${v.out - 1} ${v.in - 1}`)]);
+  return blocs.map(b => b.join('\n') + '\n\n').join('');
+}
+export function videohubCommande(texte, ip) {
+  return `(cat <<'FIN'\n${texte}FIN\nsleep 2) | nc ${ip || 'ADRESSE-IP'} 9990`;
+}
+export { VIDEOHUB };

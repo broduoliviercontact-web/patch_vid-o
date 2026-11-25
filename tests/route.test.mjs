@@ -66,3 +66,34 @@ test('données : plaques = ports matrice, U27 complet B1–B16', () => {
   for (const s of SOURCES) if (s.plaque?.startsWith('VID-I')) assert.equal(+s.plaque.slice(5), s.port);
   for (const d of DESTS) if (d.plaque?.startsWith('VID-O')) assert.equal(+d.plaque.slice(5), d.port);
 });
+
+import { videohubTexte, videohubCommande } from '../js/route.js';
+
+test('dépannage : suit le chemin, avec le test SmartView et le cordon', () => {
+  const r = run([{ src: 'BAV-20:VID-I19', srcApp: 'hdmi', dst: 'BAV-05:VID-01' }]);
+  const d = r.links[0].depannage.join(' | ');
+  assert.match(d, /HDMI → SDI/); assert.match(d, /BAV-20 VID-I19/); assert.match(d, /sortie <b>1<\/b> affiche bien l'entrée <b>19<\/b>/);
+  assert.match(d, /sortie <b>9<\/b>/); assert.match(d, /U28 A9.*U27 B15/); assert.match(d, /HDCP/);
+  assert.match(r.links[0].son, /BAV-20 AUD/);
+});
+
+test('une source HDMI vers deux arrivées : un seul convertisseur HDMI → SDI', () => {
+  const r = run([
+    { src: 'BAV-20:VID-I19', srcApp: 'hdmi', dst: 'BAV-05:VID-01' },
+    { src: 'BAV-20:VID-I19', srcApp: 'hdmi', dst: 'sv1' },
+  ]);
+  assert.equal(r.materiel.hdmi2sdi, 1);
+  assert.deepEqual(r.videohub.map(v => [v.in, v.out]), [[19, 1], [19, 9]]);
+});
+
+test('texte Videohub : ports depuis 0, sans accents, routage du jour', () => {
+  const r = run([{ src: 'ptz', dst: 'sv1' }]);
+  const t = videohubTexte(r);
+  assert.match(t, /^INPUT LABELS:\n0 Regie U28 A1\n/);
+  assert.match(t, /\n28 Camera PTZ AW-UE80\n/);
+  assert.match(t, /\n29 Melangeur OUT 1 \(absent\)\n/);
+  assert.match(t, /OUTPUT LABELS:\n0 Regie U28 A9\n/);
+  assert.ok(t.endsWith('VIDEO OUTPUT ROUTING:\n8 28\n\n'));
+  assert.equal(videohubTexte(r, { labels: false }), 'VIDEO OUTPUT ROUTING:\n8 28\n\n');
+  assert.match(videohubCommande('X\n\n', '10.0.0.5'), /\| nc 10\.0\.0\.5 9990$/);
+});
