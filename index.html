@@ -18,6 +18,7 @@
   </div>
   <div class="usage" id="usage"></div>
   <div class="actions">
+    <button id="bTerrain" class="primary" title="Gros texte, une liaison par écran, cases à cocher">Mode terrain</button>
     <button id="bNew" title="Nouveau patch">Nouveau</button>
     <button id="bExport" title="Enregistrer le patch dans un fichier">Exporter</button>
     <label class="btn" title="Ouvrir un patch enregistré">Importer<input id="bImport" type="file" accept=".json" hidden></label>
@@ -35,6 +36,8 @@
   <button data-tab="learn">Comprendre</button>
 </nav>
 
+<section id="terrain" hidden></section>
+
 <main>
   <section id="tab-links" class="tab on">
     <div class="bar">
@@ -42,7 +45,7 @@
       <button data-preset="ordiVP">Ordi au plateau → VP</button>
       <button data-preset="ptzSV">PTZ → SmartView</button>
       <button data-preset="ptzUSB">PTZ → ordi en USB</button>
-      <span class="hint">Pour chaque image : d'où elle part, où elle arrive. Le site donne les branchements, le routage Videohub et les cordons de la régie.</span>
+      <button id="openAll" class="ghost">Tout déplier / replier</button>
     </div>
     <div id="globalWarn"></div>
     <div id="links" class="rows"></div>

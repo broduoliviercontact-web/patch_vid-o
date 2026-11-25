@@ -14,7 +14,7 @@ function load() {
   try { const s = JSON.parse(localStorage.getItem(KEY)); if (s?.links) return s; } catch {}
   return fresh();
 }
-function fresh() { return { artist: '', date: '', links: [], settings: { vpEntree: 'hdmi', vpEntreeVerifiee: false, parc: { ...PARC_DEFAUT } } }; }
+function fresh() { return { artist: '', date: '', links: [], done: {}, settings: { vpEntree: 'hdmi', vpEntreeVerifiee: false, parc: { ...PARC_DEFAUT } } }; }
 function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch {} }
 
 const couleur = id => COULEURS[state.links.findIndex(l => l.id === id) % COULEURS.length];
@@ -24,19 +24,23 @@ function render() {
   res = compute(state);
   save();
   $('#artist').value = state.artist || ''; $('#date').value = state.date || '';
-  renderUsage(); renderLinks(); renderHub(); renderRegie(); renderPlan(); renderFiche();
+  renderUsage(); renderLinks(); renderHub(); renderRegie(); renderPlan(); renderFiche(); renderTerrain();
 }
 
 function renderUsage() {
-  const n = state.links.length, ok = res.links.filter(l => l.ok).length;
-  const chips = [`<span class="chip"><b>${ok}</b>/${n} liaison${n > 1 ? 's' : ''}</span>`,
-    `<span class="chip">Videohub <b>${res.videohub.length}</b></span>`,
-    `<span class="chip">Cordons régie <b>${res.cordons.length}</b></span>`];
+  // Compteurs dans les onglets ; dans l'en-tête, seulement une alerte s'il manque du matériel.
+  const n = state.links.length, bad = res.links.filter(l => !l.ok).length;
+  const counts = { links: n ? (bad ? `${n - bad}/${n}` : n) : '', hub: res.videohub.length || '', regie: res.cordons.length || '' };
+  document.querySelectorAll('#tabs button').forEach(b => {
+    const c = counts[b.dataset.tab];
+    b.querySelector('.cnt')?.remove();
+    if (c !== undefined && c !== '') b.insertAdjacentHTML('beforeend', ` <span class="cnt ${bad && b.dataset.tab === 'links' ? 'bad' : ''}">${c}</span>`);
+  });
   const parc = { ...PARC_DEFAUT, ...state.settings.parc };
-  for (const [k, v] of Object.entries(res.materiel))
-    chips.push(`<span class="chip ${v > parc[k] ? 'full' : ''}">${PARC_NOMS[k].replace(' Blackmagic', '').replace('Passerelle ', '')} <b>${v}/${parc[k]}</b></span>`);
-  $('#usage').innerHTML = chips.join('');
+  const manque = Object.entries(res.materiel).filter(([k, v]) => v > parc[k]);
+  $('#usage').innerHTML = manque.length ? `<button class="alert" data-goto="links" title="${esc(res.warnings.join('\n'))}">⚠︎ Il manque ${manque.length > 1 ? 'du matériel' : '1 ' + PARC_NOMS[manque[0][0]].replace(' Blackmagic', '').replace('Passerelle ', '').replace('Convertisseur', 'convertisseur')}</button>` : '';
 }
+$('#usage').onclick = e => { if (e.target.closest('[data-goto]')) tab('links'); };
 
 // ------------------------------------------------------------------ onglet Liaisons
 function options(list, sel, other) {
@@ -54,39 +58,51 @@ function options(list, sel, other) {
 const seg = (name, opts, val, title) => `<span class="seg" data-seg="${name}" title="${title}">${Object.entries(opts).map(([k, v]) =>
   `<button data-v="${k}" class="${k === val ? 'on' : ''}" title="${v}">${k.toUpperCase()}</button>`).join('')}</span>`;
 
+const ouverts = new Set();          // liaisons dont le détail est ouvert (pas enregistré)
 function renderLinks() {
   $('#globalWarn').innerHTML = res.warnings.map(w => `<div class="w err">⚠︎ ${esc(w)}</div>`).join('');
   if (!state.links.length) {
     $('#links').innerHTML = `<div class="row"><p class="empty">Aucune liaison. Commence par « Ordi au plateau → VP » ou « + Liaison ».</p></div>`;
     return;
   }
-  $('#links').innerHTML = state.links.map((l, i) => {
+  $('#links').innerHTML = state.links.map(l => {
     const r = res.links.find(x => x.id === l.id);
     const s = src(l.src), d = dst(l.dst);
     const showSrcApp = s && s.id !== 'ptz';
     const showDstApp = d && !d.fixe && !d.vp;
-    const body = !r ? '' : `
-      <div class="sum"><span class="cdot" style="background:${couleur(l.id)}"></span>${r.chips.map(c => `<span class="k">${esc(c)}</span>`).join('<span class="arr">→</span>')}</div>
+    const body = !r ? `<div class="sum"><span class="hint">Choisis un départ et une arrivée.</span></div>` : `
       ${r.warnings.map(w => `<div class="w err">⚠︎ ${esc(w)}</div>`).join('')}
-      ${r.ok ? `<ol class="steps">${r.steps.map(st => `<li class="${st.fixe ? 'fixe' : ''} ${st.option ? 'option' : ''}"><span class="lieu ${esc(st.lieu)}">${esc(st.lieu)}</span>${st.txt}</li>`).join('')}</ol>` : ''}
-      ${r.infos.map(w => `<div class="info">${esc(w)}</div>`).join('')}`;
+      ${r.ok ? `<details class="det" ${ouverts.has(l.id) ? 'open' : ''}>
+        <summary><span class="sum"><span class="cdot" style="background:${couleur(l.id)}"></span>${r.chips.map(c => `<span class="k">${esc(c)}</span>`).join('<span class="arr">→</span>')}</span>
+          <span class="more">détail</span></summary>
+        <ol class="steps">${r.steps.map(st => `<li class="${st.fixe ? 'fixe' : ''} ${st.option ? 'option' : ''}"><span class="lieu ${esc(st.lieu)}">${esc(st.lieu)}</span>${st.txt}</li>`).join('')}</ol>
+        ${r.infos.map(w => `<div class="info">${esc(w)}</div>`).join('')}
+      </details>` : ''}`;
     return `<div class="row ${r && !r.ok ? 'bad' : ''}" data-id="${l.id}">
       <div class="main">
         <input class="nom" data-f="nom" value="${esc(l.nom)}" placeholder="Nom (ex. Ordi artiste)">
-        <select data-f="src">${options(SOURCES, l.src)}</select>
+        <select data-f="src" aria-label="Départ">${options(SOURCES, l.src)}</select>
         ${showSrcApp ? seg('srcApp', APP_SRC, l.srcApp || 'hdmi', 'Ce que tu branches') : ''}
         <span class="arr2">→</span>
-        <select data-f="dst">${options(DESTS, l.dst, l.src)}</select>
+        <select data-f="dst" aria-label="Arrivée">${options(DESTS, l.dst, l.src)}</select>
         ${showDstApp ? seg('dstApp', APP_DST, l.dstApp || 'hdmi', 'Ce qui reçoit l\'image') : ''}
         <button class="icon" data-del title="Supprimer">✕</button>
       </div>${body}</div>`;
   }).join('');
 }
+$('#links').addEventListener('toggle', e => {
+  const row = e.target.closest('.row'); if (!row) return;
+  e.target.open ? ouverts.add(row.dataset.id) : ouverts.delete(row.dataset.id);
+}, true);
+$('#openAll').onclick = () => {
+  const all = state.links.every(l => ouverts.has(l.id));
+  state.links.forEach(l => all ? ouverts.delete(l.id) : ouverts.add(l.id)); renderLinks();
+};
 
 $('#links').addEventListener('input', e => {
   const row = e.target.closest('.row'); const f = e.target.dataset.f; if (!row || !f) return;
   const l = state.links.find(x => x.id === row.dataset.id); l[f] = e.target.value;
-  if (f === 'nom') { res = compute(state); save(); renderUsage(); renderHub(); renderRegie(); renderPlan(); renderFiche(); return; }
+  if (f === 'nom') { res = compute(state); save(); renderUsage(); renderHub(); renderRegie(); renderPlan(); renderFiche(); renderTerrain(); return; }
   render();
 });
 $('#links').addEventListener('click', e => {
@@ -104,8 +120,9 @@ const PRESETS = {
 };
 function libreSrc(ids) { return ids.find(id => !state.links.some(l => l.src === id)) || ids[0]; }
 function libreDst(ids) { return ids.find(id => !state.links.some(l => l.dst === id)) || ids[0]; }
-document.querySelectorAll('[data-preset]').forEach(b => b.onclick = () => { state.links.push({ id: uid(), ...PRESETS[b.dataset.preset]() }); render(); });
-$('#addLink').onclick = () => { state.links.push({ id: uid(), nom: '', src: '', srcApp: 'hdmi', dst: '', dstApp: 'hdmi' }); render(); };
+function ajoute(l) { const id = uid(); ouverts.add(id); state.links.push({ id, ...l }); render(); }
+document.querySelectorAll('[data-preset]').forEach(b => b.onclick = () => ajoute(PRESETS[b.dataset.preset]()));
+$('#addLink').onclick = () => ajoute({ nom: '', src: '', srcApp: 'hdmi', dst: '', dstApp: 'hdmi' });
 
 // ------------------------------------------------------------------ onglet Videohub
 function renderHub() {
@@ -215,32 +232,39 @@ function renderPlan() {
   s += `<rect x="760" y="420" width="410" height="200" rx="8" fill="none" stroke="#ffcb6b" stroke-dasharray="6 5"/><text x="772" y="442" fill="#ffcb6b" font-weight="700">SALLE</text>`;
   s += `<rect x="440" y="20" width="210" height="620" rx="8" fill="none" stroke="#ffcb6b" stroke-opacity=".5" stroke-dasharray="6 5"/><text x="452" y="42" fill="#ffcb6b" font-weight="700">NODAL</text>`;
   for (const z of ZL) s += `<text x="${z.x}" y="${z.y + 16}" fill="${ZONES[z.z].couleur}" font-weight="700">${ZONES[z.z].nom.toUpperCase()}</text>`;
-  // câblage fixe (gris)
-  const fixe = [];
-  for (const b of BAV) if (BOX[b.id] && (b.ins || b.outs)) fixe.push([edge(b.id, 'r'), edge('hub', 'l')]);
-  fixe.push([edge('hub', 'r'), edge('U28', 'l')], [edge('hub', 'r'), edge('sv', 'l')], [ctr('U28'), ctr('U27')]);
-  for (const k of ['BAV-01', 'BAV-04', 'BAV-05', 'BAV-02', 'BAV-03']) fixe.push([edge('U27', 'r'), edge(k, 'l')]);
-  fixe.push([edge('ptz', 'l'), edge('hub', 'r')], [edge('BAV-03', 'l'), edge('pupitre', 'r')], [ctr('BAV-03'), ctr('ecran24')]);
-  for (const [a, b] of fixe) s += `<path d="${curve([a, b])}" fill="none" stroke="#333a46" stroke-width="1.5"/>`;
-  // liaisons actives
+  // Boîtes utilisées aujourd'hui (départs, arrivées et tout ce que les chemins traversent)
+  const used = new Set();
+  const chemins = [];
   res.links.forEach((r, i) => {
     const l = state.links.find(x => x.id === r.id); if (!r.ok || !l) return;
-    const sb = boxOf(l.src, true), db = boxOf(l.dst, false), s0 = src(l.src), d0 = dst(l.dst);
-    const pts = [ctr(sb)];
+    const s0 = src(l.src), d0 = dst(l.dst), keys = [boxOf(l.src, true)];
     const direct = res.cordons.some(c => c.link === l.id && c.de.startsWith('B') && c.vers.startsWith('B'));
-    if (s0.type === 'tie') { pts.push(ctr('U27')); if (!direct) pts.push(ctr('U28')); }
-    if (!direct) pts.push(ctr('hub'));
-    if (d0.type === 'tie' && d0.id !== 'ecran24' && !direct) pts.push(ctr('U28'), ctr('U27'));
-    if (d0.id === 'ecran24') { if (!direct) pts.push(ctr('U28')); pts.push(ctr('U27'), ctr('BAV-03')); }
-    pts.push(ctr(db));
-    const off = (i % 5 - 2) * 3;
-    s += `<path d="${curve(pts.map(p => ({ x: p.x + off, y: p.y + off })))}" fill="none" stroke="${couleur(l.id)}" stroke-width="3.5" opacity=".9"/>`;
+    if (s0.type === 'tie') { keys.push('U27'); if (!direct) keys.push('U28'); }
+    if (!direct) keys.push('hub');
+    if (d0.type === 'tie' && d0.id !== 'ecran24' && !direct) keys.push('U28', 'U27');
+    if (d0.id === 'ecran24') { if (!direct) keys.push('U28'); keys.push('U27', 'BAV-03'); }
+    keys.push(boxOf(l.dst, false));
+    keys.forEach(k => used.add(k));
+    chemins.push({ l, keys, i });
   });
+  const vu = k => planTout || used.has(k);
+  // câblage fixe (gris) : seulement entre boîtes visibles
+  const fixe = [];
+  for (const b of BAV) if (BOX[b.id] && (b.ins || b.outs)) fixe.push([b.id, 'r', 'hub', 'l']);
+  fixe.push(['hub', 'r', 'U28', 'l'], ['hub', 'r', 'sv', 'l'], ['U28', 'c', 'U27', 'c'], ['ptz', 'l', 'hub', 'r'], ['BAV-03', 'l', 'pupitre', 'r'], ['BAV-03', 'c', 'ecran24', 'c']);
+  for (const k of ['BAV-01', 'BAV-04', 'BAV-05', 'BAV-02', 'BAV-03']) fixe.push(['U27', 'r', k, 'l']);
+  const pt = (k, side) => side === 'c' ? ctr(k) : edge(k, side);
+  for (const [a, sa, b, sb] of fixe) if (vu(a) && vu(b)) s += `<path d="${curve([pt(a, sa), pt(b, sb)])}" fill="none" stroke="#333a46" stroke-width="1.5"/>`;
+  // liaisons actives
+  for (const { l, keys, i } of chemins) {
+    const off = (i % 5 - 2) * 3;
+    s += `<path d="${curve(keys.map(k => ctr(k)).map(p => ({ x: p.x + off, y: p.y + off })))}" fill="none" stroke="${couleur(l.id)}" stroke-width="3.5" opacity=".9"/>`;
+  }
   // boîtes
   const active = new Set(state.links.flatMap(l => [boxOf(l.src, true), boxOf(l.dst, false)]));
   for (const [k, b] of Object.entries(BOX)) {
     const on = active.has(k);
-    s += `<g class="bx" data-box="${k}"><rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" rx="5" fill="${on ? '#272c36' : '#1f232b'}" stroke="${on ? '#e6e8ec' : '#4a5262'}"/>`;
+    s += `<g class="bx" data-box="${k}" opacity="${vu(k) ? 1 : .28}"><rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" rx="5" fill="${on ? '#272c36' : '#1f232b'}" stroke="${on ? '#e6e8ec' : '#4a5262'}"/>`;
     if (k === 'hub') {
       s += `<text x="${b.x + b.w / 2}" y="${b.y + 26}" text-anchor="middle" fill="#e6e8ec" font-weight="700">Videohub 40×40</text><text x="${b.x + b.w / 2}" y="${b.y + 42}" text-anchor="middle" fill="#9aa3b2" font-size="11">Blackmagic 12G</text>`;
       res.videohub.forEach((v, j) => s += `<text x="${b.x + b.w / 2}" y="${b.y + 80 + j * 20}" text-anchor="middle" fill="${couleur(v.link)}" font-weight="700">IN ${v.in} → OUT ${v.out}</text>`);
@@ -252,10 +276,13 @@ function renderPlan() {
     s += `</g>`;
   }
   s += '</svg>';
-  $('#tab-plan').innerHTML = `<p class="hint">Schéma simplifié du synoptique vidéo. Les liaisons du jour sont en couleur. Clique sur un boîtier pour voir ses prises.</p>
+  $('#tab-plan').innerHTML = `<div class="bar"><span class="hint">Les liaisons du jour en couleur. Clique sur un boîtier pour voir ses prises.</span>
+      <label class="tog"><input type="checkbox" id="planTout" ${planTout ? 'checked' : ''}> Tout le câblage</label></div>
     <div class="svgwrap" id="planSvg">${s}</div>
     <div class="legend">${state.links.map(l => `<span><span class="cdot" style="background:${couleur(l.id)}"></span>${esc(l.nom || 'sans nom')}</span>`).join('')}</div>`;
 }
+let planTout = !state.links.length;
+$('#tab-plan').addEventListener('change', e => { if (e.target.id === 'planTout') { planTout = e.target.checked; renderPlan(); } });
 function curve(p) {
   if (p.length === 2) { const [a, b] = p, mx = (a.x + b.x) / 2; return `M${a.x} ${a.y} C${mx} ${a.y} ${mx} ${b.y} ${b.x} ${b.y}`; }
   let d = `M${p[0].x} ${p[0].y}`;
@@ -319,7 +346,7 @@ function renderPTZ() {
     </ul>`;
   document.querySelectorAll('[data-preset2]').forEach(b => b.onclick = () => {
     const p = b.dataset.preset2 === 'ptzVP' ? { nom: 'Caméra PTZ', src: 'ptz', dst: libreDst(['BAV-05:VID-01', 'BAV-05:VID-02']) } : PRESETS[b.dataset.preset2]();
-    state.links.push({ id: uid(), ...p }); render(); tab('links');
+    ajoute(p); tab('links');
   });
 }
 
@@ -340,6 +367,75 @@ function renderFiche() {
     ${mat.length ? `<ul class="materiel">${mat.map(([k, n]) => `<li class="${n > parc[k] ? 'over' : ''}">${n} × ${PARC_NOMS[k]} (parc : ${parc[k]})</li>`).join('')}</ul>` : '<p class="empty">Pas de convertisseur.</p>'}`;
 }
 $('#print').onclick = () => window.print();
+
+// ------------------------------------------------------------------ mode terrain
+// Une liaison par écran, gros texte, une case par branchement. Dernière page : récap régie.
+let tIdx = 0;
+const fait = (k, txt) => (state.done?.[k] || []).includes(txt);
+function pagesTerrain() {
+  const pages = res.links.filter(r => r.ok).map(r => {
+    const l = state.links.find(x => x.id === r.id);
+    return { key: l.id, titre: l.nom || 'Liaison', sous: `${src(l.src)?.nom} → ${dst(l.dst)?.nom}`, couleur: couleur(l.id),
+      items: r.steps.filter(st => !st.option).map(st => ({ lieu: st.lieu, txt: st.txt, fixe: st.fixe })), infos: r.infos };
+  });
+  if (res.videohub.length || res.cordons.length) pages.push({ key: 'recap', titre: 'Récap régie', sous: 'Tout ce qui se fait depuis la régie, d\'un coup',
+    items: [...res.videohub.map(v => ({ lieu: 'Videohub', txt: `Entrée <b>${v.in}</b> → sortie <b>${v.out}</b> <span class="hint">(${esc(v.nom)})</span>` })),
+            ...res.cordons.map(c => ({ lieu: 'Patch', txt: `<b>${c.de.startsWith('A') ? 'U28' : 'U27'} ${c.de}</b> → <b>${c.vers.startsWith('A') ? 'U28' : 'U27'} ${c.vers}</b> <span class="hint">(${esc(c.nom)})</span>` }))] });
+  return pages;
+}
+function renderTerrain() {
+  if (!document.body.classList.contains('terrain')) return;
+  const pages = pagesTerrain();
+  tIdx = Math.max(0, Math.min(tIdx, pages.length - 1));
+  const top = `<div class="tbar"><button id="tQuit">✕ Quitter</button><span class="tpos">${pages.length ? `${tIdx + 1} / ${pages.length}` : ''}</span>
+    <button id="tReset" class="ghost">Tout décocher</button></div>`;
+  if (!pages.length) { $('#terrain').innerHTML = top + `<p class="empty big">Aucune liaison complète. Prépare le patch d'abord.</p>`; return; }
+  const p = pages[tIdx];
+  const todo = p.items.filter(it => !it.fixe), done = todo.filter(it => fait(p.key, it.txt)).length;
+  $('#terrain').innerHTML = top + `
+    <div class="tcard" style="--c:${p.couleur || 'var(--acc)'}">
+      <h2>${esc(p.titre)}</h2><div class="tsous">${esc(p.sous)}</div>
+      <div class="tprog"><div style="width:${todo.length ? 100 * done / todo.length : 100}%"></div></div>
+      <ol class="tsteps">${p.items.map((it, i) => it.fixe
+        ? `<li class="fixe"><span class="lieu ${esc(it.lieu)}">${esc(it.lieu)}</span>${it.txt}</li>`
+        : `<li class="${fait(p.key, it.txt) ? 'ok' : ''}"><label><input type="checkbox" data-i="${i}" ${fait(p.key, it.txt) ? 'checked' : ''}>
+           <span><span class="lieu ${esc(it.lieu)}">${esc(it.lieu)}</span>${it.txt}</span></label></li>`).join('')}</ol>
+      ${(p.infos || []).map(w => `<div class="info">${esc(w)}</div>`).join('')}
+      ${done === todo.length && todo.length ? '<div class="tok">✓ Tout est branché</div>' : ''}
+    </div>
+    <div class="tnav"><button id="tPrev" ${tIdx === 0 ? 'disabled' : ''}>◀ Précédente</button>
+      <div class="tdots">${pages.map((q, i) => `<button data-p="${i}" class="${i === tIdx ? 'on' : ''}" style="--c:${q.couleur || 'var(--acc)'}" title="${esc(q.titre)}"></button>`).join('')}</div>
+      <button id="tNext" class="primary" ${tIdx === pages.length - 1 ? 'disabled' : ''}>Suivante ▶</button></div>`;
+  $('#terrain').dataset.key = p.key;
+}
+function terrain(on) {
+  document.body.classList.toggle('terrain', on); $('#terrain').hidden = !on;
+  if (on) { tIdx = 0; renderTerrain(); window.scrollTo(0, 0); }
+}
+$('#bTerrain').onclick = () => terrain(true);
+$('#terrain').addEventListener('click', e => {
+  const t = e.target;
+  if (t.id === 'tQuit') return terrain(false);
+  if (t.id === 'tPrev') { tIdx--; return renderTerrain(); }
+  if (t.id === 'tNext') { tIdx++; return renderTerrain(); }
+  if (t.dataset.p) { tIdx = +t.dataset.p; return renderTerrain(); }
+  if (t.id === 'tReset' && confirm('Décocher toutes les cases ?')) { state.done = {}; save(); return renderTerrain(); }
+});
+$('#terrain').addEventListener('change', e => {
+  if (e.target.dataset.i === undefined) return;
+  const key = $('#terrain').dataset.key, p = pagesTerrain()[tIdx], txt = p.items[+e.target.dataset.i].txt;
+  state.done ||= {}; const set = new Set(state.done[key] || []);
+  e.target.checked ? set.add(txt) : set.delete(txt);
+  state.done[key] = [...set]; save(); renderTerrain();
+});
+// balayage gauche / droite sur tablette et téléphone
+let x0 = null;
+$('#terrain').addEventListener('touchstart', e => x0 = e.touches[0].clientX, { passive: true });
+$('#terrain').addEventListener('touchend', e => {
+  if (x0 === null) return; const dx = e.changedTouches[0].clientX - x0; x0 = null;
+  const n = pagesTerrain().length;
+  if (Math.abs(dx) > 70) { tIdx = Math.max(0, Math.min(n - 1, tIdx + (dx < 0 ? 1 : -1))); renderTerrain(); }
+});
 
 // ------------------------------------------------------------------ onglet Comprendre
 function renderLearn() {

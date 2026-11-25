@@ -13,7 +13,7 @@ Accès par mot de passe (`middleware.js`, variable `SITE_PASSWORD` dans Vercel).
 |---|---|
 | `js/data.js` | l'installation : boîtiers, ports du Videohub, numéros de câbles, patchs U27 / U28, synchro, PTZ, parc |
 | `js/route.js` | le calcul des chemins (fonction pure, testée) |
-| `js/app.js` | l'interface : Liaisons, Videohub, Patch régie, Plan, Caméra PTZ, Fiche, Comprendre |
+| `js/app.js` | l'interface : Liaisons, Videohub, Patch régie, Plan, Caméra PTZ, Fiche, Comprendre, et le mode terrain (tablette / téléphone) |
 | `boitiers/` | tableaux de circuits des boîtiers, repris de patch-auditorium |
 | `tests/` | `npm test` |
 

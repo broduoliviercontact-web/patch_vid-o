@@ -124,3 +124,64 @@ table.t td.big { font-size:16px; font-weight:700; }
 .legend { display:flex; flex-wrap:wrap; gap:6px 14px; font-size:12.5px; color:var(--mut); margin:8px 0; }
 .empty { color:var(--mut); font-style:italic; }
 .materiel li { margin:2px 0; } .materiel .over { color:var(--err); font-weight:600; }
+
+/* ---- en-tête sur une ligne, compteurs dans les onglets ---- */
+.top { flex-wrap:nowrap; gap:12px; }
+.top .brand { white-space:nowrap; }
+.usage { flex:1; justify-content:flex-end; }
+.alert { background:#3a1f1f; border-color:var(--err); color:#ffb4ae; font-size:13px; padding:5px 10px; white-space:nowrap; }
+button.ghost { background:none; }
+.cnt { display:inline-block; min-width:18px; padding:0 5px; border-radius:9px; background:var(--bg3); color:var(--tx); font-size:11px; text-align:center; margin-left:2px; }
+.cnt.bad { background:var(--err); color:#fff; }
+@media (max-width:980px) {
+  .top { flex-wrap:wrap; } .brand span { display:none; }
+  .show { order:3; flex:1 1 100%; } .show #artist { flex:1; width:auto; }
+}
+@media (max-width:600px) {
+  .actions button, .actions .btn { padding:6px 8px; font-size:13px; }
+  #bNew, #bImport, #bExport, .actions .btn { display:none; }
+  main { padding:10px 10px 80px; }
+  .row .main { gap:6px; } .row .nom, .row select { flex:1 1 100%; max-width:none; } .row .arr2 { display:none; }
+  .bar .hint { display:none; }
+}
+
+/* ---- liaisons repliables ---- */
+.det { margin-top:6px; }
+.det summary { list-style:none; cursor:pointer; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.det summary::-webkit-details-marker { display:none; }
+.det summary .sum { margin:0; }
+.det .more { font-size:12px; color:var(--acc); white-space:nowrap; }
+.det .more::after { content:' ▸'; } .det[open] .more::after { content:' ▾'; }
+
+
+/* ---- mode terrain ---- */
+body.terrain .top, body.terrain .tabs, body.terrain main, body.terrain .panel { display:none !important; }
+#terrain { max-width:760px; margin:0 auto; padding:12px 14px 40px; font-size:18px; }
+.tbar { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:12px; }
+.tbar button { font-size:15px; } .tpos { color:var(--mut); font-weight:600; }
+.tcard { background:var(--bg2); border:1px solid var(--line); border-top:5px solid var(--c); border-radius:12px; padding:18px; }
+.tcard h2 { margin:0; font-size:26px; } .tsous { color:var(--mut); font-size:15px; margin:4px 0 12px; }
+.tprog { height:6px; background:var(--bg); border-radius:3px; overflow:hidden; margin-bottom:10px; }
+.tprog div { height:100%; background:var(--ok); transition:width .2s; }
+.tsteps { list-style:none; padding:0; margin:0; }
+.tsteps li { border-bottom:1px solid var(--line); padding:12px 0; line-height:1.45; }
+.tsteps li:last-child { border-bottom:0; }
+.tsteps li.fixe { color:var(--mut); font-size:15px; padding-left:44px; }
+.tsteps label { display:flex; gap:14px; align-items:flex-start; cursor:pointer; }
+.tsteps input { width:30px; height:30px; flex:none; accent-color:var(--ok); margin:0; }
+.tsteps li.ok > label > span { opacity:.5; }
+.tsteps .lieu { font-size:12px; vertical-align:2px; }
+#terrain .info { font-size:14px; margin-top:8px; }
+.tok { margin-top:12px; color:var(--ok); font-weight:700; font-size:20px; text-align:center; }
+.tnav { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:16px; }
+.tnav > button { font-size:17px; padding:12px 16px; } .tnav button:disabled { opacity:.35; }
+.tdots { display:flex; gap:8px; flex-wrap:wrap; justify-content:center; }
+.tdots button { width:14px; height:14px; padding:0; border-radius:50%; background:var(--bg3); border:2px solid var(--c); }
+.tdots button.on { background:var(--c); }
+.empty.big { font-size:18px; text-align:center; margin-top:40px; }
+@media (max-width:600px) { #terrain { padding:10px; font-size:17px; } .tcard { padding:14px; } .tcard h2 { font-size:22px; } .tnav > button { padding:12px 10px; font-size:15px; } }
+
+.actions button, .actions .btn, .tabs button { white-space:nowrap; }
+.show #date { width:auto; }
+@media (max-width:1400px) { .brand span { display:none; } .show #artist { width:160px; } }
+@media (max-width:600px) { .show { flex-wrap:nowrap; } .show #date { flex:0 0 150px; min-width:0; } body { overflow-x:hidden; } }
