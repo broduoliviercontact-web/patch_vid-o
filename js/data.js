@@ -127,6 +127,7 @@ export const PTZ = {
   sdi: { cable: 2029, port: 29 }, synchro: { cable: 9501, patch: 'A1' },
   lan: { cable: 4192, u: 'C24', injecteur: 4217, switch: 4194 },
   pupitre: 'Panasonic AW-RP60GJ', pupitreLieu: 'Table régie', pupitreLan: { cable: 4223, prise: 'BAV-03 ETH-01' },
+  // Pupitre : LAN (PoE) câblé ; Alim 12V DC (XLR4), RS422-1 à 5 (RJ45) et TALLY/GPI (SubD15) non câblés sur le synoptique.
 };
 
 // ---------------------------------------------------------------------------------------------

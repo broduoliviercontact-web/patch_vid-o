@@ -304,6 +304,13 @@ function renderPTZ() {
       <li>Si la caméra ne répond pas : vérifie que l'injecteur PoE++ est allumé et que le cordon du patch RJ45 C24 est en place.</li>
       <li>Pupitre et caméra doivent être sur le même réseau IP. Le synoptique ne dit pas sur quel réseau arrive ETH-01 du BAV-03 : <b>à vérifier</b>.</li>
     </ol></div>
+    <h2>Les prises du pupitre ${PTZ.pupitre}</h2>
+    <table class="t"><tr><th>Prise</th><th>Connecteur</th><th>Branché à</th></tr>
+      <tr><td><b>LAN (PoE)</b></td><td>RJ45</td><td>${PTZ.pupitreLan.prise} (câble ${PTZ.pupitreLan.cable}). Le pupitre est alimenté par le réseau (PoE).</td></tr>
+      <tr><td>Alim 12V DC</td><td>XLR4</td><td>Non câblée : inutile si le PoE est actif</td></tr>
+      <tr><td>RS422-1 à 5</td><td>RJ45</td><td>Non câblées (pilotage en série, on passe par le réseau)</td></tr>
+      <tr><td>TALLY / GPI</td><td>SubD15</td><td>Non câblée (sert avec un mélangeur)</td></tr>
+    </table>
     <h2>Les autres prises de la caméra</h2>
     <ul>
       <li><b>GL IN</b> : synchro (genlock), câble ${PTZ.synchro.cable} depuis le patch synchro du nodal ${PTZ.synchro.patch}. Inutile sans mélangeur.</li>
