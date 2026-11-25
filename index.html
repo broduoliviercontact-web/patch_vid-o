@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Patch vidéo · Auditorium</title>
+<link rel="icon" href="icon.svg">
+<meta name="theme-color" content="#16181d">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand">Patch vidéo <span>· Auditorium Grandes Serres</span></div>
+  <div class="show">
+    <input id="artist" placeholder="Artiste / événement">
+    <input id="date" type="date">
+  </div>
+  <div class="usage" id="usage"></div>
+  <div class="actions">
+    <button id="bNew" title="Nouveau patch">Nouveau</button>
+    <button id="bExport" title="Enregistrer le patch dans un fichier">Exporter</button>
+    <label class="btn" title="Ouvrir un patch enregistré">Importer<input id="bImport" type="file" accept=".json" hidden></label>
+    <button id="bSettings" title="Vidéoprojecteur et parc de convertisseurs">Réglages</button>
+  </div>
+</header>
+
+<nav class="tabs" id="tabs">
+  <button data-tab="links" class="on">Liaisons</button>
+  <button data-tab="hub">Videohub</button>
+  <button data-tab="regie">Patch régie</button>
+  <button data-tab="plan">Plan</button>
+  <button data-tab="ptz">Caméra PTZ</button>
+  <button data-tab="fiche">Fiche</button>
+  <button data-tab="learn">Comprendre</button>
+</nav>
+
+<main>
+  <section id="tab-links" class="tab on">
+    <div class="bar">
+      <button id="addLink" class="primary">+ Liaison</button>
+      <button data-preset="ordiVP">Ordi au plateau → VP</button>
+      <button data-preset="ptzSV">PTZ → SmartView</button>
+      <button data-preset="ptzUSB">PTZ → ordi en USB</button>
+      <span class="hint">Pour chaque image : d'où elle part, où elle arrive. Le site donne les branchements, le routage Videohub et les cordons de la régie.</span>
+    </div>
+    <div id="globalWarn"></div>
+    <div id="links" class="rows"></div>
+  </section>
+
+  <section id="tab-hub" class="tab"></section>
+  <section id="tab-regie" class="tab"></section>
+  <section id="tab-plan" class="tab"></section>
+  <section id="tab-ptz" class="tab learn"></section>
+  <section id="tab-fiche" class="tab">
+    <div class="bar"><button id="print" class="primary">Imprimer la fiche</button></div>
+    <div id="fiche" class="fiches"></div>
+  </section>
+  <section id="tab-learn" class="tab learn"></section>
+</main>
+
+<aside id="panel" class="panel" hidden>
+  <button class="close" id="panelClose" aria-label="Fermer">✕</button>
+  <div id="panelBody"></div>
+</aside>
+
+<dialog id="settings">
+  <form method="dialog">
+    <h2>Réglages</h2>
+    <div class="grid2">
+      <label>Entrée du vidéoprojecteur
+        <select id="vpEntree"><option value="hdmi">HDMI (convertisseur SDI → HDMI au VP)</option><option value="sdi">SDI (direct)</option></select>
+      </label>
+      <label class="tog" style="flex-direction:row;align-self:end"><input type="checkbox" id="vpVerif"> Vérifié sur place</label>
+    </div>
+    <p class="hint">Ton parc de matériel (le site prévient s'il en manque).</p>
+    <div id="parcFields" class="grid2"></div>
+    <div class="right"><button value="ok" class="primary">OK</button></div>
+  </form>
+</dialog>
+
+<dialog id="img"><form method="dialog"><img id="imgEl" alt=""><div class="right"><button>Fermer</button></div></form></dialog>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
