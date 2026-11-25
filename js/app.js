@@ -302,7 +302,7 @@ function renderPTZ() {
       <li>Le pupitre est sur la table régie, branché en réseau (PoE) sur la prise <b>${PTZ.pupitreLan.prise}</b> (câble ${PTZ.pupitreLan.cable}) du mur vidéo.</li>
       <li>La caméra est alimentée et reliée au réseau par un <b>injecteur PoE++</b> dans la baie régie : switch régie (câble ${PTZ.lan.switch}) → injecteur → câble ${PTZ.lan.injecteur} → patch RJ45 <b>${PTZ.lan.u}</b> → câble ${PTZ.lan.cable} → caméra.</li>
       <li>Si la caméra ne répond pas : vérifie que l'injecteur PoE++ est allumé et que le cordon du patch RJ45 C24 est en place.</li>
-      <li>Pupitre et caméra doivent être sur le même réseau IP. Le synoptique ne dit pas sur quel réseau arrive ETH-01 du BAV-03 : <b>à vérifier</b>.</li>
+      <li>Pupitre et caméra sont sur le même réseau : testé et validé sur place.</li>
     </ol></div>
     <h2>Les prises du pupitre ${PTZ.pupitre}</h2>
     <table class="t"><tr><th>Prise</th><th>Connecteur</th><th>Branché à</th></tr>
@@ -375,7 +375,6 @@ function renderLearn() {
       <li>Le <b>mélangeur vidéo</b> n'existe pas : les sorties 23 à 26 et les entrées 30-31 de la matrice sont peut-être câblées dans le vide, ou pas câblées.</li>
       <li>L'entrée du vidéoprojecteur : HDMI ou SDI (Réglages).</li>
       <li>Le format accepté par les convertisseurs (3G = 1080p max).</li>
-      <li>Sur quel réseau arrive le pupitre caméra (BAV-03 ETH-01).</li>
       <li>Synchro : ${SYNCHRO.length} départs au patch synchro du nodal, source non dessinée.</li>
     </ul>
     <p class="hint">Source : synoptique LGS2-INE-EXE-22-SCH-AUD-TN-8002, indice 0 (02/10/2025), et tableaux de circuits des boîtiers.</p>`;

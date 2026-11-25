@@ -23,7 +23,9 @@ Source : synoptique LGS2-INE-EXE-22-SCH-AUD-TN-8002, indice 0 (02/10/2025).
 
 - Le mélangeur vidéo prévu n'est pas installé : sorties 23–26 et entrées 30–31 de la matrice.
 - L'entrée du vidéoprojecteur (HDMI ou SDI) : dans Réglages.
-- Le réseau du pupitre caméra (BAV-03 ETH-01) ; la source du patch synchro.
+- La source du patch synchro.
+
+Vérifié : le pupitre AW-RP60GJ pilote bien la caméra PTZ.
 
 ## Déployer
 
